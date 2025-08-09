@@ -6,6 +6,9 @@
 # must use venv in _Python/_python_venvs/tensorflow_mac311
 # Python version 3.11 for compatibility
 
+# First test at getting TensorFlow working on RPi5 and macOS
+
+# Detect platform backend
 try:
     import tflite_runtime.interpreter as tflite
     backend = "tflite-runtime (likely Raspberry Pi)"
@@ -16,29 +19,27 @@ except ImportError:
 print(f"[INFO] Using backend: {backend}")
 print(f"[INFO] Interpreter class from: {tflite.Interpreter}")
 
-# Optional: path to a .tflite model file for a real inference test
-# For now, you can leave it None to just test that TF loads
-model_path = None  # e.g., "hello_world.tflite"
+# Path to .tflite model file
+model_path = "hello_world.tflite"
 
-if model_path:
-    interpreter = tflite.Interpreter(model_path=model_path)
-    interpreter.allocate_tensors()
+import numpy as np
 
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
+interpreter = tflite.Interpreter(model_path=model_path)
+interpreter.allocate_tensors()
 
-    print(f"[DEBUG] Input details: {input_details}")
-    print(f"[DEBUG] Output details: {output_details}")
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
-    # Fill with dummy input data
-    import numpy as np
-    dummy_input = np.array([0.0], dtype=np.float32)
-    interpreter.set_tensor(input_details[0]['index'], dummy_input)
+print(f"[DEBUG] Input details: {input_details}")
+print(f"[DEBUG] Output details: {output_details}")
 
-    interpreter.invoke()
+# Match the model's expected shape exactly (usually [1, 1] for hello_world.tflite)
+expected_shape = input_details[0]['shape']
+dummy_input = np.zeros(expected_shape, dtype=np.float32)
+dummy_input[0][0] = 0.5  # Example input value
 
-    output_data = interpreter.get_tensor(output_details[0]['index'])
-    print(f"[RESULT] Output data: {output_data}")
+interpreter.set_tensor(input_details[0]['index'], dummy_input)
+interpreter.invoke()
 
-else:
-    print("[INFO] No model file provided, TensorFlow Lite backend is working.")
+output_data = interpreter.get_tensor(output_details[0]['index'])
+print(f"[RESULT] Output data: {output_data}")
